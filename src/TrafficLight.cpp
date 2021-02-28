@@ -39,7 +39,7 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
-    _queue = MessageQueue<TrafficLightPhase>();
+    MessageQueue<TrafficLightPhase> _queue;
 }
 
 void TrafficLight::waitForGreen()
@@ -47,6 +47,14 @@ void TrafficLight::waitForGreen()
     // FP.5b : add the implementation of the method waitForGreen, in which an infinite while-loop 
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
+    
+    while(true)
+    {
+        TrafficLightPhase p = _queue.receive();
+        if(p == TrafficLightPhase::green){
+            return;
+        }
+    }
 }
 
 TrafficLightPhase TrafficLight::getCurrentPhase()
@@ -88,19 +96,23 @@ void TrafficLight::cycleThroughPhases()
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            switch(_currentPhase)
+            TrafficLightPhase newPhase;
+            if(_currentPhase == TrafficLightPhase::red)
             {
-                case TrafficLightPhase::red:
-                {
-                    _currentPhase = TrafficLightPhase::green;
-                    _queue.send(std::move(TrafficLightPhase::green));
-                }
-                default:
-                {
-                    _currentPhase = TrafficLightPhase::red;
-                    _queue.send(std::move(TrafficLightPhase::red));
-                }
+                std::unique_lock<std::mutex> lck(_mtx);
+                std::cout << "TrafficLight #" << _id << "turns green" << std::endl;
+                lck.unlock();
+                newPhase = TrafficLightPhase::green;
             }
+            else
+            {
+                std::unique_lock<std::mutex> lck(_mtx);
+                std::cout << "TrafficLight #" << _id << "turns red" << std::endl;
+                lck.unlock();
+                newPhase = TrafficLightPhase::red;
+            }
+            _currentPhase = newPhase;
+            _queue.send(std::move(newPhase));
             // reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();
         }
