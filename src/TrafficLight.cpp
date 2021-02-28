@@ -82,7 +82,7 @@ void TrafficLight::cycleThroughPhases()
 
     // initalize variables
     bool hasEnteredIntersection = false;
-    double cycleDuration = 5000; // duration of a single simulation cycle in ms
+    double cycleDuration = rand() % 2000 + 4000;
     std::chrono::time_point<std::chrono::system_clock> lastUpdate;
 
     // init stop watch
